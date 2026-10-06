@@ -35,10 +35,14 @@ export function HowItWorks() {
               Each hairline connection is one <em>weight</em>. There are {weights} of them in total.
               Weights are <em>multiplied</em> by their inputs. They can be negative or positive, with an
               absolute value smaller than 1 or larger than 1. So they can either magnify or diminish
-              their inputs, or flip positive inputs into “inhibitory” negative ones. (For color coding:
-              gray is zero. The color coded scale reaches pure red at the most negative value and pure
-              green at the most positive. The maximum and minimum values among the weights and biases
-              were learned in training.)
+              their inputs, flip positive inputs into “inhibitory” negative ones and vice versa, or
+              completely cancel out their inputs when 0. (A weight of 0 can be considered “not
+              connected”.)
+            </p>
+            <p>
+              For color coding: gray is zero. The color coded scale reaches pure red at the most negative
+              value and pure green at the most positive. The maximum and minimum values among the weights
+              and biases were learned in training.
             </p>
             <p>After multiplying all the inputs by their weights, they are all summed together.</p>
             <p>
@@ -64,7 +68,7 @@ export function HowItWorks() {
               given the numeral you drew in the grid, and thus the input vector to the neural net.
             </p>
             <p>
-              Clear the grid and the blue disappears. Every weight is multiplied by 0, each hidden unit
+              Clear the grid, and every weight is multiplied by 0, each hidden unit
               equals tanh() of its bias, and the softmax is normalizing biases alone. That empty (all
               0’s) input vector was trained to come out as ? with a probability near 1.
             </p>

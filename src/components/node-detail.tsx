@@ -1,4 +1,4 @@
-import { weightColor } from "@/lib/mlp";
+import { diagramWeightColor } from "@/lib/mlp";
 
 const INPUT_ROWS = [
   { value: 1, weight: -1.5 },
@@ -69,7 +69,7 @@ function weightText(w: number): string {
 const inputEdges = INPUT_ROWS.map((row, i) => {
   const [a, b] = trim({ x: IN_X, y: IN_Y[i] }, { x: CX, y: CY }, IN_R, CR);
   const side: -1 | 1 = i === 2 ? 1 : -1;
-  return { a, b, label: edgeLabel(a, b, side), weight: row.weight, color: weightColor(row.weight) };
+  return { a, b, label: edgeLabel(a, b, side), weight: row.weight, color: diagramWeightColor(row.weight) };
 });
 
 const outputEdges = OUT.map((tip) => {
@@ -157,9 +157,30 @@ export function NodeDetail() {
           <line x1={PLOT.x} y1={axisY} x2={PLOT.x + PLOT.w} y2={axisY} stroke="var(--color-ink)" strokeOpacity={0.28} strokeWidth={1} />
           <line x1={axisX} y1={PLOT.y} x2={axisX} y2={PLOT.y + PLOT.h} stroke="var(--color-ink)" strokeOpacity={0.28} strokeWidth={1} />
           <path d={tanhCurve()} fill="none" stroke="var(--color-ink)" strokeWidth={2} />
-          <line x1={dot.x} y1={axisY} x2={dot.x} y2={dot.y} stroke="var(--color-signal)" strokeWidth={1} strokeDasharray="2 2" />
-          <circle cx={dot.x} cy={dot.y} r={3.5} fill="var(--color-signal)" />
+          <line x1={dot.x} y1={axisY} x2={dot.x} y2={dot.y} stroke="#007700" strokeWidth={1} strokeDasharray="2 2" />
+          <circle cx={dot.x} cy={axisY} r={2.5} fill="var(--color-ink)" />
+          <circle cx={dot.x} cy={dot.y} r={3.5} fill="#007700" />
         </g>
+        <text
+          x={dot.x}
+          y={axisY + 12}
+          textAnchor="middle"
+          className="font-mono"
+          fontSize={10}
+          fill="var(--color-ink)"
+        >
+          {signed(preActivation, 2)}
+        </text>
+        <text
+          x={dot.x - 6}
+          y={dot.y - 6}
+          textAnchor="end"
+          className="font-mono"
+          fontSize={10}
+          fill="#007700"
+        >
+          {actText}
+        </text>
         <text x={PLOT.x + 10} y={PLOT.y + 18} className="font-sans" fontSize={14} fontWeight={500} fill="var(--color-ink)">
           tanh()
         </text>
@@ -234,7 +255,7 @@ export function NodeDetail() {
               className="font-mono"
               fontSize={15}
               fontWeight={500}
-              fill="var(--color-ink)"
+              fill="#007700"
             >
               {signed(row.value, 1)}
             </text>
@@ -242,7 +263,7 @@ export function NodeDetail() {
               cx={IN_X}
               cy={IN_Y[i]}
               r={IN_R}
-              fill={weightColor(row.value)}
+              fill={diagramWeightColor(row.value)}
               stroke="var(--color-ink)"
               strokeOpacity={0.35}
               strokeWidth={1.25}
@@ -250,7 +271,7 @@ export function NodeDetail() {
           </g>
         ))}
 
-        <circle cx={CX} cy={CY} r={CR} fill={weightColor(BIAS)} stroke="var(--color-ink)" strokeOpacity={0.45} strokeWidth={1.5} />
+        <circle cx={CX} cy={CY} r={CR} fill={diagramWeightColor(BIAS)} stroke="var(--color-ink)" strokeOpacity={0.45} strokeWidth={1.5} />
         <text x={CX} y={CY - 7} textAnchor="middle" className="font-sans" fontSize={11} fill="var(--color-ink)">
           bias
         </text>
@@ -292,7 +313,7 @@ export function NodeDetail() {
             className="font-mono"
             fontSize={14}
             fontWeight={600}
-            fill="var(--color-signal)"
+            fill="#007700"
           >
             {actText}
           </text>
@@ -309,9 +330,9 @@ export function NodeDetail() {
                 ) : (
                   <span className="inline-block size-2.5 shrink-0" aria-hidden="true" />
                 )}
-                <span className={row.result ? "text-signal" : undefined}>{row.left}</span>
+                <span className={row.result ? "font-semibold text-[#007700]" : undefined}>{row.left}</span>
               </span>
-              <span className={row.result ? "font-semibold text-signal" : undefined}>{row.right}</span>
+              <span className={row.result ? "font-semibold text-[#007700]" : undefined}>{row.right}</span>
             </li>
           ))}
         </ul>

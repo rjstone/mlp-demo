@@ -12,6 +12,8 @@ export const DRIVE_FRACTION = 0.25;
 export type NetState = {
   contrib: number[];
   driven: boolean[];
+  hidden: number[];
+  logits: number[];
   probs: number[];
   winner: number;
 };
@@ -51,10 +53,38 @@ export function weightColor(value: number): string {
   return mix(ZERO, NEG, lo < 0 ? value / lo : 0);
 }
 
-export const hiddenBiasColor = b1.map(weightColor);
-export const outputBiasColor = b2.map(weightColor);
-export const hiddenEdgeColor = w1.map((row) => row.map(weightColor));
-export const outputEdgeColor = w2.map((row) => row.map(weightColor));
+/** Diagram weight mode only. 0 → 80% gray, so a zero weight nearly disappears. */
+const DIAGRAM_ZERO = [204, 204, 204];
+
+export function diagramWeightColor(value: number): string {
+  const { lo, hi } = weightScale;
+  if (value >= 0) return mix(DIAGRAM_ZERO, POS, hi > 0 ? value / hi : 0);
+  return mix(DIAGRAM_ZERO, NEG, lo < 0 ? value / lo : 0);
+}
+
+const WHITE = [255, 255, 255];
+
+/**
+ * Activation scale, split at ±1.
+ * 0 is white. ±1 is half saturated. The extremes (`lo`, `hi`) are full red and full green.
+ * If an extreme falls inside ±1, that side runs from white at 0 to full color at the extreme.
+ */
+export function activationColor(value: number, lo: number, hi: number): string {
+  if (value >= 0) return mix(WHITE, POS, activationSat(value, hi));
+  return mix(WHITE, NEG, activationSat(-value, -lo));
+}
+
+function activationSat(magnitude: number, extreme: number): number {
+  if (extreme <= 0 || magnitude <= 0) return 0;
+  if (extreme <= 1) return Math.min(1, magnitude / extreme);
+  if (magnitude <= 1) return 0.5 * magnitude;
+  return Math.min(1, 0.5 + (0.5 * (magnitude - 1)) / (extreme - 1));
+}
+
+export const diagramHiddenBiasColor = b1.map(diagramWeightColor);
+export const diagramOutputBiasColor = b2.map(diagramWeightColor);
+export const diagramHiddenEdgeColor = w1.map((row) => row.map(diagramWeightColor));
+export const diagramOutputEdgeColor = w2.map((row) => row.map(diagramWeightColor));
 
 export function formatProb(p: number): string {
   return p.toFixed(2);
@@ -106,7 +136,7 @@ export function infer(bits: readonly number[]): NetState {
   let winner = 0;
   for (let k = 1; k < OUTPUTS; k++) if (probs[k] > probs[winner]) winner = k;
 
-  return { contrib, driven, probs, winner };
+  return { contrib, driven, hidden, logits, probs, winner };
 }
 
 export function weightCount(): { weights: number; biases: number } {

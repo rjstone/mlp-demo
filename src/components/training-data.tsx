@@ -30,8 +30,12 @@ export function TrainingData() {
           every glyph. A grid that was never shown can still be recognized: if it is close to a learned
           glyph, it drives the same hidden units, and the softmax can name that digit. That is
           generalization, and it is not perfect. A careful digit, including a one-pixel slip, should land
-          correctly. Other unseen grids will be claimed by the wrong digit. Eight hidden units memorize a
-          small neighborhood. They do not read handwriting in general.
+          correctly. Other unseen grids will be claimed by the wrong digit.
+        </p>
+        <p>
+          Eight hidden units memorize a small neighborhood. They do not read handwriting in general. If a
+          much larger number of hidden units and a larger more detailed grid were used with more input
+          units, then this design could recognize handwriting reasonably well with sufficient training.
         </p>
       </div>
       <div className="mt-6 grid grid-cols-4 items-start gap-3">

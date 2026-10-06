@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "4×5 Perceptron";
+const APP_NAME = "Multi-Layer Perceptron (MLP) Neural Network Numeral Image Recognition Demo";
 
 export const Route = createRootRoute({
   head: () => ({

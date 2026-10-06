@@ -1,19 +1,20 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import {
-  DRIVE_FRACTION,
   HIDDEN,
   INPUTS,
   LABELS,
   OUTPUTS,
+  activationColor,
+  diagramHiddenBiasColor,
+  diagramHiddenEdgeColor,
+  diagramOutputBiasColor,
+  diagramOutputEdgeColor,
   formatProb,
   formatSigned,
-  hiddenBiasColor,
-  hiddenEdgeColor,
-  outputBiasColor,
-  outputEdgeColor,
   weightScale,
   type NetState,
 } from "@/lib/mlp";
+import { w1, w2 } from "@/lib/mlp-weights";
 
 const VB_W = 880;
 const PAD_L = 68;
@@ -61,7 +62,8 @@ function plotLayout(height: number): Plot {
 }
 
 const zeroStop = ((0 - weightScale.lo) / (weightScale.hi - weightScale.lo)) * 100;
-const scaleGradient = `linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(128, 128, 128) ${zeroStop}%, rgb(0, 255, 0) 100%)`;
+const weightGradient = `linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(204, 204, 204) ${zeroStop}%, rgb(0, 255, 0) 100%)`;
+const INPUT_MARK = "#007700";
 
 type DiagramProps = {
   bits: readonly number[];
@@ -87,35 +89,63 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
 
   const { h: plotH, yIn, yHid, yOut, yClass, yProb } = plot;
 
+  const active = bits.some((bit) => bit === 1);
+
+  let actLo = 0;
+  let actHi = 0;
+  if (active) {
+    const note = (value: number) => {
+      if (value < actLo) actLo = value;
+      if (value > actHi) actHi = value;
+    };
+    for (let j = 0; j < HIDDEN; j++) {
+      note(net.hidden[j]);
+      for (let i = 0; i < INPUTS; i++) {
+        const product = bits[i] * w1[j][i];
+        if (product !== 0) note(product);
+      }
+    }
+    for (let k = 0; k < OUTPUTS; k++) {
+      note(net.logits[k]);
+      for (let j = 0; j < HIDDEN; j++) {
+        const product = net.hidden[j] * w2[k][j];
+        if (product !== 0) note(product);
+      }
+    }
+    for (let i = 0; i < INPUTS; i++) if (bits[i] === 1) note(1);
+  }
+
   const inputEdges: Line[] = [];
-  const inputHot: Line[] = [];
   for (let j = 0; j < HIDDEN; j++) {
     for (let i = 0; i < INPUTS; i++) {
-      const line = {
+      const product = bits[i] * w1[j][i];
+      const color = active ? activationColor(product, actLo, actHi) : diagramHiddenEdgeColor[j][i];
+      if (active && color === "rgb(255, 255, 255)") continue;
+      inputEdges.push({
         key: `h-${i}-${j}`,
         x1: X_IN[i],
         y1: yIn + R_IN,
         x2: X_HID[j],
         y2: yHid - R_HID,
-        color: hiddenEdgeColor[j][i],
-      };
-      (bits[i] === 1 ? inputHot : inputEdges).push(line);
+        color,
+      });
     }
   }
 
   const outputEdges: Line[] = [];
-  const outputHot: Line[] = [];
   for (let k = 0; k < OUTPUTS; k++) {
     for (let j = 0; j < HIDDEN; j++) {
-      const line = {
+      const product = net.hidden[j] * w2[k][j];
+      const color = active ? activationColor(product, actLo, actHi) : diagramOutputEdgeColor[k][j];
+      if (active && color === "rgb(255, 255, 255)") continue;
+      outputEdges.push({
         key: `o-${j}-${k}`,
         x1: X_HID[j],
         y1: yHid + R_HID,
         x2: X_OUT[k],
         y2: yOut - R_OUT,
-        color: outputEdgeColor[k][j],
-      };
-      (net.driven[j] ? outputHot : outputEdges).push(line);
+        color,
+      });
     }
   }
 
@@ -124,23 +154,37 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-col gap-3 p-4 pb-2">
-        <div className="inline-grid w-fit grid-cols-[auto_11rem_auto] items-center self-start">
-          <p className="col-start-1 pr-1.5 text-xs text-ink">Weights and biases</p>
-          <div className="col-start-2 h-2 rounded-full" style={{ background: scaleGradient }} />
-          <p className="col-start-3 flex items-center gap-2 pl-3 text-xs text-ink">
-            Active path
-            <span className="inline-block h-1 w-8 rounded-full bg-signal" aria-hidden="true" />
-          </p>
-          <div className="col-start-2 mt-1 flex justify-between font-mono text-xs tabular-nums text-ink-soft">
-            <span>{formatSigned(weightScale.lo)}</span>
-            <span>0</span>
-            <span>{formatSigned(weightScale.hi)}</span>
-          </div>
+        <div className={`inline-grid w-fit items-center self-start ${active ? "grid-cols-[auto_16rem]" : "grid-cols-[auto_11rem]"}`}>
+          <p className="col-start-1 pr-1.5 text-xs text-ink">{active ? "Activation" : "Weights and biases"}</p>
+          <div
+            className="col-start-2 h-2 rounded-full"
+            style={{ background: active ? activationLegendGradient(actLo, actHi) : weightGradient }}
+          />
+          {active ? (
+            <div className="relative col-start-2 mt-1 h-4 font-mono text-xs tabular-nums text-ink-soft">
+              {activationMarks(actLo, actHi).map((mark) => (
+                <span
+                  key={`${mark.at}-${mark.text}`}
+                  className={`absolute top-0 ${mark.anchor === "start" ? "left-0" : mark.anchor === "end" ? "right-0" : "-translate-x-1/2"}`}
+                  style={mark.anchor === "center" ? { left: `${mark.at}%` } : undefined}
+                >
+                  {mark.text}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="col-start-2 mt-1 flex justify-between font-mono text-xs tabular-nums text-ink-soft">
+              <span>{formatSigned(weightScale.lo)}</span>
+              <span>0</span>
+              <span>{formatSigned(weightScale.hi)}</span>
+            </div>
+          )}
         </div>
         <p className="max-w-3xl text-xs leading-relaxed text-pretty text-ink-soft">
-          Inputs are row-major: four pixels per row, top row at the left. Node fill is the bias.
-          Input nodes have none — blue means that pixel is 1. A hidden unit is driven when the
-          on-pixels push it by at least {DRIVE_FRACTION} of the strongest unit, bias excluded.
+          Inputs are row-major: four pixels per row, top row at the left. An empty grid shows each
+          weight and bias. Once a pixel is on, color shows activation instead: edges are input times
+          weight, hidden nodes are their tanh output, and output nodes are their output before softmax.
+          Zero stays white. ±1 is half saturated, and the lowest and highest values are full red and full green.
         </p>
       </div>
       <div className="mx-2 mb-3 min-h-0 flex-1 overflow-x-auto">
@@ -151,10 +195,8 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
             aria-label={`Perceptron. Highest probability is ${LABELS[net.winner]} at ${formatProb(net.probs[net.winner])}. ${summary}.`}
             className="absolute inset-0 h-full w-full font-mono select-none"
           >
-          <EdgeLayer lines={inputEdges} hot={false} />
-          <EdgeLayer lines={outputEdges} hot={false} />
-          <EdgeLayer lines={inputHot} hot />
-          <EdgeLayer lines={outputHot} hot />
+          <EdgeLayer lines={inputEdges} />
+          <EdgeLayer lines={outputEdges} />
 
           {Array.from({ length: 5 }, (_, row) => {
             const left = X_IN[row * 4];
@@ -189,7 +231,7 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
                   x={x}
                   y={36}
                   textAnchor="middle"
-                  fill={on ? "var(--color-signal)" : "var(--color-ink-soft)"}
+                  fill={on ? INPUT_MARK : "var(--color-ink-soft)"}
                   fontSize={13}
                   fontWeight={on ? 600 : 500}
                 >
@@ -199,9 +241,9 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
                   cx={x}
                   cy={yIn}
                   r={R_IN}
-                  fill={on ? "var(--color-signal)" : "var(--color-well)"}
+                  fill={active ? activationColor(bits[i], actLo, actHi) : "#ffffff"}
                   stroke="var(--color-ink)"
-                  strokeOpacity={on ? 0.45 : 0.28}
+                  strokeOpacity={0.75}
                   strokeWidth={1}
                 />
               </g>
@@ -214,10 +256,10 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
               cx={x}
               cy={yHid}
               r={R_HID}
-              fill={hiddenBiasColor[j]}
-              stroke={net.driven[j] ? "var(--color-signal)" : "var(--color-ink)"}
-              strokeOpacity={net.driven[j] ? 1 : 0.4}
-              strokeWidth={net.driven[j] ? 2.5 : 1}
+              fill={active ? activationColor(net.hidden[j], actLo, actHi) : diagramHiddenBiasColor[j]}
+              stroke="var(--color-ink)"
+              strokeOpacity={0.55}
+              strokeWidth={1}
             />
           ))}
 
@@ -229,7 +271,7 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
                   cx={x}
                   cy={yOut}
                   r={R_OUT}
-                  fill={outputBiasColor[k]}
+                  fill={active ? activationColor(net.logits[k], actLo, actHi) : diagramOutputBiasColor[k]}
                   stroke="var(--color-ink)"
                   strokeOpacity={win ? 0.9 : 0.35}
                   strokeWidth={win ? 2.25 : 1}
@@ -264,6 +306,30 @@ export function MlpDiagram({ bits, net }: DiagramProps) {
   );
 }
 
+function activationLegendGradient(lo: number, hi: number): string {
+  const stops = activationStops(lo, hi);
+  return `linear-gradient(90deg, ${stops.map((stop) => `${stop.color} ${stop.at}%`).join(", ")})`;
+}
+
+function activationMarks(lo: number, hi: number): { text: string; at: number; anchor: "start" | "center" | "end" }[] {
+  const marks: { text: string; at: number; anchor: "start" | "center" | "end" }[] = [];
+  if (lo < 0) marks.push({ text: formatSigned(lo), at: 0, anchor: "start" });
+  if (lo < -1) marks.push({ text: "−1", at: 25, anchor: "center" });
+  marks.push({ text: "0", at: 50, anchor: "center" });
+  if (hi > 1) marks.push({ text: "+1", at: 75, anchor: "center" });
+  if (hi > 0) marks.push({ text: formatSigned(hi), at: 100, anchor: "end" });
+  return marks;
+}
+
+function activationStops(lo: number, hi: number): { at: number; color: string }[] {
+  const stops = [{ at: 0, color: activationColor(lo, lo, hi) }];
+  if (lo < -1) stops.push({ at: 25, color: activationColor(-1, lo, hi) });
+  stops.push({ at: 50, color: "rgb(255, 255, 255)" });
+  if (hi > 1) stops.push({ at: 75, color: activationColor(1, lo, hi) });
+  stops.push({ at: 100, color: activationColor(hi, lo, hi) });
+  return stops;
+}
+
 function LayerLabel({ y, text }: { y: number; text: string }) {
   return (
     <text x={12} y={y} textAnchor="start" dominantBaseline="central" fill="var(--color-ink-soft)" fontSize={11}>
@@ -272,24 +338,9 @@ function LayerLabel({ y, text }: { y: number; text: string }) {
   );
 }
 
-function EdgeLayer({ lines, hot }: { lines: Line[]; hot: boolean }) {
+function EdgeLayer({ lines }: { lines: Line[] }) {
   return (
     <g aria-hidden="true">
-      {hot
-        ? lines.map((line) => (
-            <line
-              key={`${line.key}-hot`}
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke="var(--color-signal)"
-              strokeOpacity={0.45}
-              strokeWidth={3}
-              strokeLinecap="round"
-            />
-          ))
-        : null}
       {lines.map((line) => (
         <line
           key={line.key}
