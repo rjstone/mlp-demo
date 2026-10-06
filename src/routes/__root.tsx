@@ -13,7 +13,8 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Draw a digit on a 4×5 grid and watch a small multilayer perceptron classify it.",
+        content:
+          "Draw a digit on a 4×5 grid. A multilayer perceptron with 20 inputs, 8 tanh hidden units, and an 11-way softmax recognizes 0–9 or ?.",
       },
       { name: "theme-color", content: "#10120e" },
     ],

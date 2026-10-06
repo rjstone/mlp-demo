@@ -14,14 +14,18 @@ const SHARE_META_KEYS = new Set([
   "og:title",
   "og:description",
   "og:image",
+  "og:image:secure_url",
   "og:image:width",
   "og:image:height",
+  "og:image:type",
+  "og:image:alt",
   "og:type",
   "og:url",
   "og:site_name",
   "twitter:card",
   "twitter:title",
   "twitter:image",
+  "twitter:image:alt",
   "twitter:description",
   "x:game:image",
   "x:game:image:width",
@@ -339,6 +343,27 @@ function applyCustomCardFromFs(site, cwd) {
   return { ...site, card: "custom", image: disk };
 }
 
+/** Baked https origin from site.json `url`. Request Host still cannot be a
+ * Vercel system domain (Envoy rewrites those), but an app published on the
+ * owner's own *.vercel.app may set this so scrapers get an absolute image. */
+export function canonicalSiteUrl(site = {}) {
+  const raw = String(site.url ?? "").trim();
+  if (!raw) return null;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  const host = url.hostname.toLowerCase();
+  if (!/^[a-z0-9.-]+$/.test(host) || !host.includes(".") || host.startsWith(".") || host.endsWith(".")) {
+    return null;
+  }
+  const path = url.pathname && url.pathname !== "/" ? url.pathname.replace(/\/+$/, "") : "";
+  return { host, page: `https://${host}${path}/` };
+}
+
 export function grokOgHeadTags({
   host = "",
   appName = DEFAULT_APP_NAME,
@@ -347,18 +372,33 @@ export function grokOgHeadTags({
   cwd = process.cwd(),
 } = {}) {
   const title = resolveOgTitle(site, appName, host, documentTitle);
-  const publicHost = resolvePublicHost(host);
+  const baked = canonicalSiteUrl(site);
+  const requestHost = resolvePublicHost(host);
+  const requestName = String(host ?? "").split(",")[0].trim().split(":")[0].toLowerCase();
+  // Request Host on *.vercel.app is not a public image origin (Envoy / SSO).
+  // A site.json `url` is the owner's real origin, so use it only then.
+  const useBaked = !requestHost && Boolean(baked) && isVercelSystemHost(requestName);
+  const publicHost = requestHost || (useBaked ? baked.host : "");
+  const description = String(site.description ?? "").trim();
+  const imageAlt = String(site.image_alt ?? "").trim() || title;
+  const siteName = String(site.site_name ?? "").trim() || title;
   const tags = [
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:site_name" content="${escapeHtml(siteName)}">`,
   ];
-  const description = String(site.description ?? "").trim();
   if (description) {
     tags.push(`<meta property="og:description" content="${escapeHtml(description)}">`);
+    tags.push(`<meta name="twitter:description" content="${escapeHtml(description)}">`);
   }
   if (String(site.type ?? "").toLowerCase() === "x:game") {
     tags.push(`<meta property="og:type" content="x:game">`);
+  } else {
+    tags.push(`<meta property="og:type" content="website">`);
   }
+  const pageUrl = requestHost ? `https://${requestHost}/` : useBaked ? baked.page : "";
+  if (pageUrl) tags.push(`<meta property="og:url" content="${escapeHtml(pageUrl)}">`);
   if (publicHost) {
     const asset = resolveOgCardAsset(site, cwd);
     const custom = Boolean(asset);
@@ -367,9 +407,17 @@ export function grokOgHeadTags({
       : `${ogServiceUrl()}/v1/card.png?host=${encodeURIComponent(publicHost)}&title=${encodeURIComponent(title)}`;
     const color = !custom ? placeholderCardColor(site) : "";
     if (color) image += `&color=${encodeURIComponent(color)}`;
+    const imageType = image.split("?")[0].endsWith(".jpg") || image.split("?")[0].endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/png";
     tags.push(`<meta property="og:image" content="${escapeHtml(image)}">`);
+    tags.push(`<meta property="og:image:secure_url" content="${escapeHtml(image)}">`);
+    tags.push(`<meta property="og:image:type" content="${imageType}">`);
     tags.push(`<meta property="og:image:width" content="1200">`);
     tags.push(`<meta property="og:image:height" content="630">`);
+    tags.push(`<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">`);
+    tags.push(`<meta name="twitter:image" content="${escapeHtml(image)}">`);
+    tags.push(`<meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">`);
     const banner = String(site.banner ?? "").trim();
     if (banner) {
       const bannerUrl = `https://${publicHost}${banner.startsWith("/") ? banner : `/${banner}`}`;

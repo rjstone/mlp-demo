@@ -1,4 +1,8 @@
 {
   "title": "Multi-Layer Perceptron (MLP) Neural Network Numeral Image Recognition Demo",
-  "card": "custom"
+  "description": "Draw a digit on a 4×5 grid. A multilayer perceptron with 20 inputs, 8 tanh hidden units, and an 11-way softmax recognizes 0–9 or ?.",
+  "site_name": "Multi-Layer Perceptron",
+  "image_alt": "A 4×5 pixel eight, recognized at 0.97, beside the multilayer perceptron that classified it.",
+  "card": "custom",
+  "url": "https://mlp-demo.vercel.app/"
 }
