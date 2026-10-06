@@ -121,14 +121,20 @@ used as an image origin.
 
 ## Deploy
 
-1. Edit source on `main` of
+Production is `main`. Routine edits go on `pre-production`. Vercel deploys
+`main` to [mlp-demo.vercel.app](https://mlp-demo.vercel.app/) and deploys
+`pre-production` as a Preview. A pull request into `main` is how a preview
+becomes production. Do not push day-to-day work straight to `main`.
+
+1. Edit source on `pre-production` of
    [github.com/rjstone/mlp-demo](https://github.com/rjstone/mlp-demo).
 2. Do not commit `.vercel/` or a prebuilt `.vercel/output`. Vercel will skip
    the build and ship whatever bundle was baked into the commit. That is how
    production kept serving the old app after a newer push.
 3. [vercel.json](vercel.json) installs with `npm install --no-audit --no-fund`.
    Do not omit dev dependencies.
-4. Pushing `main` deploys production. The project is `mlp-demo` on the
-   `rjstone` Vercel account, framework TanStack Start. Confirm the live title
-   and that the build log does not say it used prebuilt artifacts.
+4. Push `pre-production` and wait for that Preview deployment. Confirm the
+   preview title and that the build log does not say it used prebuilt
+   artifacts. Production does not move until a pull request from
+   `pre-production` is merged into `main`.
 5. This app does not enable auth and does not need `DATABASE_URL`.

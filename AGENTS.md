@@ -104,34 +104,41 @@ This repository is the numeral MLP demo, not a blank scaffold. Follow
 [AGENTS.project.md](AGENTS.project.md) for the design. The rules below are the
 ones that have already shipped a wrong site when they were skipped.
 
-**Live app:** [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/).
-Source of truth is `main` on [rjstone/mlp-demo](https://github.com/rjstone/mlp-demo).
-The Vercel project `mlp-demo` (account `rjstone`, framework TanStack Start)
-deploys that branch to production on every push. Do not publish through a
-second Vercel account.
+**Live app:** [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/) is production.
+Production source is `main` on [rjstone/mlp-demo](https://github.com/rjstone/mlp-demo).
+Day-to-day work goes on `pre-production`. The Vercel project `mlp-demo`
+(account `rjstone`, framework TanStack Start) deploys `main` to production
+and every other branch as a Preview. Do not publish through a second Vercel
+account, and do not push routine edits straight to `main`.
 
 **Deploy**
 
-1. Change source. Do not commit anything under `.vercel/`. `.gitignore` already
-   ignores it. A committed `.vercel/output` makes Vercel log `Using prebuilt
-   build artifacts from .vercel/output` and serve that bundle instead of
-   compiling `main`. A half-deleted output directory fails the deploy. The
-   committed prebuild is why an older “4×5 Perceptron” stayed live after a
-   newer source push.
+1. Change source on `pre-production`. Do not commit anything under `.vercel/`.
+   `.gitignore` already ignores it. A committed `.vercel/output` makes Vercel
+   log `Using prebuilt build artifacts from .vercel/output` and serve that
+   bundle instead of compiling the branch. A half-deleted output directory
+   fails the deploy. The committed prebuild is why an older “4×5 Perceptron”
+   stayed live after a newer source push.
 2. Leave [vercel.json](vercel.json) as `npm install --no-audit --no-fund`.
    Do not add `--omit=dev`. `npm run build` is Vite plus the Nitro Vercel
    preset, then `db:migrate`, which exits immediately when `DATABASE_URL` is
    unset. This demo has no database and no accounts.
-3. Push to `main`. Wait until the production deployment is `READY` and
-   [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/) returns the
-   long page title, not “4×5 Perceptron”.
-4. Share tags are not written in [src/routes/__root.tsx](src/routes/__root.tsx).
+3. Push to `pre-production`. Wait until that Preview deployment is `READY`.
+   It does not change [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/).
+   Confirm the preview returns the long page title, not “4×5 Perceptron”,
+   and that the build log does not say it used prebuilt artifacts.
+4. When that preview looks right, open a pull request from `pre-production`
+   into `main`. Merging it is the production deploy. Do not merge it yourself
+   unless the user asks.
+5. Share tags are not written in [src/routes/__root.tsx](src/routes/__root.tsx).
    The head injector strips `og:*` and `twitter:*` and rewrites them from
    [src/lib/og/site.json](src/lib/og/site.json) plus [public/og.jpg](public/og.jpg).
    Keep `card` as `custom` and `url` as `https://mlp-demo.vercel.app/`. The
    injector refuses a request Host on `*.vercel.app` (those hosts are not a
    public image origin on the Grok platform). The baked `url` is what makes
-   `og:image` and `twitter:image` absolute on this project.
+   `og:image` and `twitter:image` absolute on this project. Preview hosts are
+   also `*.vercel.app`, so the share image on a Preview still points at the
+   production URL in `site.json`, not at the preview hostname.
 
 **Design constraints that are easy to undo**
 

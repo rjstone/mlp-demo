@@ -12,6 +12,10 @@ shows the weights and activations behind that call.
 
 **Use it:** [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/)
 
+That URL tracks `main`. Changes land on
+[`pre-production`](https://github.com/rjstone/mlp-demo/tree/pre-production)
+first, and reach production through a pull request into `main`.
+
 The training set is a handful of hand-built glyphs, close edits, and junk
 patterns labeled `?`. Eight hidden units cover that neighborhood. They do not
 read handwriting in general.
