@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-bg: #10120e;
+  --color-fg: #ebe8dc;
+  --color-muted: #9c988a;
+  --color-line: #34362c;
+  --color-surface: #1c1e16;
+  --color-paper: #f3f0e6;
+  --color-ink: #171910;
+  --color-ink-soft: #5e5c52;
+  --color-signal: #2f6fed;
+  --color-well: #d7d2c4;
+  --color-pixel: #171910;
+  --color-pos: #00ff00;
+  --color-neg: #ff0000;
+  --color-zero: #808080;
+
+  --shadow-plate: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-fg);
+  }
+}
