@@ -100,8 +100,62 @@ verified `context.userId`** — never a client-sent id, never a demo/mock user.
 
 ## Project instructions
 
-If `AGENTS.project.md` exists, it holds the user's project instructions. Follow
-it with the same priority as this file.
+This repository is the numeral MLP demo, not a blank scaffold. Follow
+[AGENTS.project.md](AGENTS.project.md) for the design. The rules below are the
+ones that have already shipped a wrong site when they were skipped.
+
+**Live app:** [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/).
+Source of truth is `main` on [rjstone/mlp-demo](https://github.com/rjstone/mlp-demo).
+The Vercel project `mlp-demo` (account `rjstone`, framework TanStack Start)
+deploys that branch to production on every push. Do not publish through a
+second Vercel account.
+
+**Deploy**
+
+1. Change source. Do not commit anything under `.vercel/`. `.gitignore` already
+   ignores it. A committed `.vercel/output` makes Vercel log `Using prebuilt
+   build artifacts from .vercel/output` and serve that bundle instead of
+   compiling `main`. A half-deleted output directory fails the deploy. The
+   committed prebuild is why an older “4×5 Perceptron” stayed live after a
+   newer source push.
+2. Leave [vercel.json](vercel.json) as `npm install --no-audit --no-fund`.
+   Do not add `--omit=dev`. `npm run build` is Vite plus the Nitro Vercel
+   preset, then `db:migrate`, which exits immediately when `DATABASE_URL` is
+   unset. This demo has no database and no accounts.
+3. Push to `main`. Wait until the production deployment is `READY` and
+   [https://mlp-demo.vercel.app/](https://mlp-demo.vercel.app/) returns the
+   long page title, not “4×5 Perceptron”.
+4. Share tags are not written in [src/routes/__root.tsx](src/routes/__root.tsx).
+   The head injector strips `og:*` and `twitter:*` and rewrites them from
+   [src/lib/og/site.json](src/lib/og/site.json) plus [public/og.jpg](public/og.jpg).
+   Keep `card` as `custom` and `url` as `https://mlp-demo.vercel.app/`. The
+   injector refuses a request Host on `*.vercel.app` (those hosts are not a
+   public image origin on the Grok platform). The baked `url` is what makes
+   `og:image` and `twitter:image` absolute on this project.
+
+**Design constraints that are easy to undo**
+
+- Architecture stays 20 → 8 tanh → 11 softmax. Inputs are the 20 pixels,
+  row-major, 0 or 1. Class 10 is `?`. Do not hand-edit
+  [src/lib/mlp-weights.ts](src/lib/mlp-weights.ts); retrain with
+  `node scripts/train-mlp.mjs`.
+- Empty grid: weight/bias colors. Any inked pixel: activation colors, and the
+  legend swaps. Do not draw both legends. Do not bring back the blue active
+  path.
+- Diagram zero is 80% gray (`rgb(204, 204, 204)`), not 50% gray and not
+  near-black. Activation 0 is white. Input numerals that are 1 are `#007700`;
+  the node fill is the activation color of that value, not `#007700`.
+- In activation mode, output nodes are pre-softmax logits. The numbers under
+  them stay softmax probabilities. Hide edges whose activation color is pure
+  white.
+- The neuron-detail figure is a static example (inputs 1, 0.5, 0.8; weights
+  −1.5, 0, 2; bias 0.5; pre-activation 0.60; tanh 0.537). It uses the weight
+  scale, not the live activation scale.
+- The page title is “Multi-Layer Perceptron (MLP) Neural Network Numeral Image
+  Recognition Demo”. `Neural Network` stays on one line.
+
+Auth and the database stay off unless the user asks for accounts or stored
+data.
 
 ---
 
